@@ -14,7 +14,7 @@ import (
 
 
 func GetVadapav(id string) (*Directory, error) {
-	url := "https://dl2.vadapav.mov/api/d/" + id
+	url := "https://vadapav.mov/api/d/" + id
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -27,46 +27,37 @@ func GetVadapav(id string) (*Directory, error) {
 	}
 
 	var response struct {
-		Data struct {
-			Dir    bool   `json:"dir"`
-			Id     string `json:"id"`
-			Mtime  string `json:"mtime"`
-			Name   string `json:"name"`
-			Parent string `json:"parent"`
-			Files  []struct {
-				Dir    bool   `json:"dir"`
-				Id     string `json:"id"`
-				Mtime  string `json:"mtime"`
-				Name   string `json:"name"`
-				Parent string `json:"parent"`
-				Size   int64  `json:"size,omitempty"`
-			} `json:"files"`
-		} `json:"data"`
-		Message string `json:"message"`
+		Items []struct {
+			Id       string `json:"id"`
+			Name     string `json:"name"`
+			ParentId string `json:"parentId"`
+			Type     string `json:"type"`
+			Size     int64  `json:"size,omitempty"`
+		} `json:"items"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Convert files to Files struct slice
+	// Convert items to Files struct slice
 	var files []Files
-	for _, file := range response.Data.Files {
+	for _, item := range response.Items {
 		files = append(files, Files{
-			Id:     file.Id,
-			Name:   file.Name,
-			Dir:    file.Dir,
-			Parent: file.Parent,
-			Size:   file.Size,
+			Id:     item.Id,
+			Name:   item.Name,
+			Dir:    item.Type == "folder",
+			Parent: item.ParentId,
+			Size:   item.Size,
 		})
 	}
 
 	return &Directory{
-		Path:   response.Data.Id,
-		Name:   response.Data.Name,
-		Parent: response.Data.Parent,
+		Path:   id,
+		Name:   "",
+		Parent: "",
 		Files:  files,
-		Id:     response.Data.Id,
+		Id:     id,
 	}, nil
 }
 
@@ -148,7 +139,7 @@ func GetShow(id string) (*Show, error) {
 func SearchShow(query string) ([]Directory, error) {
 	// URL encode the query
 	escapedQuery := url.QueryEscape(query)
-	url := "https://dl2.vadapav.mov/api/s/" + escapedQuery
+	url := "https://vadapav.mov/api/s/" + escapedQuery
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -161,13 +152,12 @@ func SearchShow(query string) ([]Directory, error) {
 	}
 
 	var response struct {
-		Data []struct {
-			Dir    bool   `json:"dir"`
-				Id     string `json:"id"`
-				Name   string `json:"name"`
-				Parent string `json:"parent"`
-		} `json:"data"`
-		Message string `json:"message"`
+		Items []struct {
+			Id       string `json:"id"`
+			Name     string `json:"name"`
+			ParentId string `json:"parentId"`
+			Type     string `json:"type"`
+		} `json:"items"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -175,12 +165,12 @@ func SearchShow(query string) ([]Directory, error) {
 	}
 
 	// Convert response to Directory slice
-	directories := make([]Directory, len(response.Data))
-	for i, item := range response.Data {
+	directories := make([]Directory, len(response.Items))
+	for i, item := range response.Items {
 		directories[i] = Directory{
 			Path:   item.Id,
 			Name:   item.Name,
-			Parent: item.Parent,
+			Parent: item.ParentId,
 			Id:     item.Id,
 		}
 	}

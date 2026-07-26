@@ -71,7 +71,7 @@ func browseDirectory(dirID string) (string, error) {
 func main() {
 	var user internal.User
 	var show internal.TVShow
-	vadapavPlaybackUrl := "https://dl2.vadapav.mov/f/"
+	vadapavPlaybackUrl := "https://vadapav.mov/f/"
 
     var homeDir string
 	if runtime.GOOS == "windows" {
